@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Color Inventory</title>
+  <style>
+    body {
+      background: #f4f5f7;
+      font-family: "Inter", sans-serif;
+      text-align: center;
+      margin: 20px auto;
+      color: #333;
+      max-width: 1000px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    #inventory {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+    }
+
+    .item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #fff;
+      border-radius: 10px;
+      padding: 14px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      transition: transform 0.1s ease;
+    }
+
+    .item:hover {
+      transform: scale(1.02);
+    }
+
+    .color-square {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-bottom: 8px;
+    }
+
+    .label {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .count {
+      width: 48px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    button {
+      padding: 10px 14px;
+      font-size: 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.1s ease;
+      min-width: 44px;
+      min-height: 44px;
+    }
+
+    button:hover {
+      transform: scale(1.08);
+    }
+
+    .inc, .dec {
+      border: 3px solid black;
+    }
+
+    .inc {
+      background: #4caf50;
+      color: white;
+    }
+
+    .dec {
+      background: #e74c3c;
+      color: white;
+    }
+
+    .delete {
+      background: #b0b0b0;
+      color: white;
+      font-size: 16px;
+      padding: 8px 10px;
+      margin-top: 10px;
+    }
+
+    .delete:hover {
+      background: #888;
+    }
+
+    #addBtn {
+      margin-top: 25px;
+      padding: 12px 22px;
+      background: #3498db;
+      color: white;
+      font-weight: bold;
+      border-radius: 10px;
+      font-size: 18px;
+    }
+
+    #addForm {
+      display: none;
+      margin-top: 20px;
+      background: #fff;
+      padding: 18px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    textarea {
+      padding: 8px 10px;
+      margin: 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+      width: 90%;
+    }
+
+    #previewSquare {
+      display: inline-block;
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-top: 10px;
+    }
+
+    #saveColor {
+      background: #2ecc71;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 16px;
+      margin-top: 8px;
+    }
+
+    #saveColor:hover {
+      background: #27ae60;
+    }
+  </style>
+</head>
+<body>
+  <h1>Color Inventory</h1>
+
+  <div id="inventory"></div>
+
+  <button id="addBtn" onclick="toggleAddForm()">+ Add New Color</button>
+
+  <div id="addForm">
+    <h3>Add New Color(s)</h3>
+    <p style="font-size:14px;color:#555;margin-top:-5px;">
+      Enter one or more colors using the format: <br>
+      <b>name:hexcode</b> (no # needed), separated by commas or new lines. <br>
+      Example:<br>
+      <code>Red:ff0000, Blue:0000ff</code>
+    </p>
+
+    <textarea id="multiInput" rows="4" placeholder="Red:ff0000&#10;Blue:0000ff"></textarea>
+    <div><span id="previewSquare"></span></div>
+    <button id="saveColor" onclick="addNewColors()">Save</button>
+  </div>
+
+  <script>
+    const defaultItems = [
+      { name: "Red", count: 0, hex: "#ff4d4d" },
+      { name: "Blue", count: 0, hex: "#4d79ff" },
+      { name: "Green", count: 0, hex: "#4dff88" },
+    ];
+
+    function loadInventory() {
+      const saved = JSON.parse(localStorage.getItem("inventoryData")) || defaultItems;
+      const container = document.getElementById("inventory");
+      container.innerHTML = "";
+      saved.forEach((item, index) => {
+        const card = document.createElement("div");
+        card.className = "item";
+        card.innerHTML = `
+          <div class="color-square" style="background:${item.hex}"></div>
+          <div class="label">${item.name}</div>
+          <div class="controls">
+            <button class="dec" onclick="changeCount(${index}, -1)">–</button>
+            <div class="count" id="count-${index}">${item.count}</div>
+            <button class="inc" onclick="changeCount(${index}, 1)">+</button>
+          </div>
+          <button class="delete" onclick="deleteItem(${index})">❌</button>
+        `;
+        container.appendChild(card);
+      });
+      localStorage.setItem("inventoryData", JSON.stringify(saved));
+    }
+
+    function changeCount(index, delta) {
+      const data = JSON.parse(localStorage.getItem("inventoryData")) || defaultItems;
+      data[index].count += delta;
+      if (data[index].count < 0) data[index].count = 0;
+      localStorage.setItem("inventoryData", JSON.stringify(data));
+      document.getElementById(`count-${index}`).textContent = data[index].count;
+    }
+
+    function deleteItem(index) {
+      const data = JSON.parse(localStorage.getItem("inventoryData")) || defaultItems;
+      const item = data[index];
+      if (confirm(`Delete "${item.name}" from your list?`)) {
+        data.splice(index, 1);
+        localStorage.setItem("inventoryData", JSON.stringify(data));
+        loadInventory();
+      }
+    }
+
+    function toggleAddForm() {
+      const form = document.getElementById("addForm");
+      form.style.display = form.style.display === "none" ? "block" : "none";
+    }
+
+    document.getElementById("multiInput").addEventListener("input", () => {
+      const input = document.getElementById("multiInput").value.trim();
+      const preview = document.getElementById("previewSquare");
+      const match = input.match(/[A-Fa-f0-9]{6}/);
+      preview.style.background = match ? "#" + match[0] : "#fff";
+    });
+
+    function addNewColors() {
+      const rawInput = document.getElementById("multiInput").value.trim();
+      if (!rawInput) return alert("Please enter at least one color and hex code.");
+
+      const entries = rawInput.split(/[\n,]+/).map(e => e.trim()).filter(Boolean);
+      const data = JSON.parse(localStorage.getItem("inventoryData")) || defaultItems;
+
+      for (const entry of entries) {
+        const [namePart, hexPart] = entry.split(":").map(e => e.trim());
+        if (!namePart || !hexPart) continue;
+        let hex = hexPart.startsWith("#") ? hexPart : "#" + hexPart;
+        if (!/^#[A-Fa-f0-9]{6}$/.test(hex)) {
+          alert(`Invalid hex for ${namePart}: ${hexPart}`);
+          continue;
+        }
+        data.push({ name: namePart, count: 0, hex });
+      }
+
+      localStorage.setItem("inventoryData", JSON.stringify(data));
+      document.getElementById("multiInput").value = "";
+      document.getElementById("previewSquare").style.background = "#fff";
+      toggleAddForm();
+      loadInventory();
+    }
+
+    loadInventory();
+  </script>
+</body>
+</html>
